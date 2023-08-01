@@ -1,91 +1,153 @@
 require 'rails_helper'
 
 RSpec.describe 'Customer Subscriptions API' do
-  it 'can create a customer subscription' do
-    customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
-    subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+  describe 'create a customer subscription' do
+    it 'can create a customer subscription' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
 
-    customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
 
-    post '/api/v0/customer_subscription', params: customer_subscription_params
+      post '/api/v0/customer_subscriptions', params: customer_subscription_params
 
-    expect(response).to be_successful
-    expect(response.status).to eq(201)
+      expect(response).to be_successful
+      expect(response.status).to eq(201)
 
-    reply = JSON.parse(response.body, symbolize_names: true)
+      reply = JSON.parse(response.body, symbolize_names: true)
 
-    expect(reply).to be_a(Hash)
-    expect(reply).to have_key(:message)
-    expect(reply[:message]).to eq('New Subscription Created')
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:message)
+      expect(reply[:message]).to eq('New Subscription Created')
+    end
+
+    it 'can re-activate a cancelled customer subscription' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+      customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 1)
+
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
+
+      post '/api/v0/customer_subscriptions', params: customer_subscription_params
+
+      expect(response).to be_successful
+      expect(response.status).to eq(200)
+
+      reply = JSON.parse(response.body, symbolize_names: true)
+
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:message)
+      expect(reply[:message]).to eq('Subscription Re-Activated')
+    end
+
+    it 'cannot re-activate an active customer subscription' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+      customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 0)
+
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
+
+      post '/api/v0/customer_subscriptions', params: customer_subscription_params
+
+      expect(response).to_not be_successful
+      expect(response.status).to eq(400)
+
+      reply = JSON.parse(response.body, symbolize_names: true)
+
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:error)
+      expect(reply[:error]).to eq('Subscription Already Active')
+    end
+
+    it 'cannot create a customer subscription without a customer_id' do
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+
+      customer_subscription_params = { subscription_id: subscription_1.id }
+
+      post '/api/v0/customer_subscriptions', params: customer_subscription_params
+
+      expect(response).to_not be_successful
+      expect(response.status).to eq(400)
+
+      reply = JSON.parse(response.body, symbolize_names: true)
+
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:error)
+      expect(reply[:error]).to eq("Customer must exist and Customer can't be blank")
+    end
+
+    it 'cannot create a customer subscription without a subscription_id' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+
+      customer_subscription_params = { customer_id: customer_1.id }
+
+      post '/api/v0/customer_subscriptions', params: customer_subscription_params
+
+      expect(response).to_not be_successful
+      expect(response.status).to eq(400)
+
+      reply = JSON.parse(response.body, symbolize_names: true)
+
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:error)
+      expect(reply[:error]).to eq("Subscription must exist and Subscription can't be blank")
+    end
   end
 
-  it 'can re-activate a cancelled customer subscription' do
-    customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
-    subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
-    customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 1)
+  describe 'destroy a customer subscription' do
+    it 'can cancel an active customer subscription' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+      customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 0)
 
-    customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
 
-    post '/api/v0/customer_subscription', params: customer_subscription_params
+      delete '/api/v0/customer_subscriptions', params: customer_subscription_params
 
-    expect(response).to be_successful
-    expect(response.status).to eq(200)
+      expect(response).to be_successful
+      expect(response.status).to eq(200)
 
-    reply = JSON.parse(response.body, symbolize_names: true)
+      reply = JSON.parse(response.body, symbolize_names: true)
 
-    expect(reply).to be_a(Hash)
-    expect(reply).to have_key(:message)
-    expect(reply[:message]).to eq('Subscription Re-Activated')
-  end
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:message)
+      expect(reply[:message]).to eq('Subscription Cancelled')
+    end
 
-  it 'cannot re-activate an active customer subscription' do
-    customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
-    subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
-    customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 0)
+    it 'cannot cancel a cancelled customer subscription' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
+      customer_subscription_1 = CustomerSubscription.create!(customer_id: customer_1.id, subscription_id: subscription_1.id, status: 1)
 
-    customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
 
-    post '/api/v0/customer_subscription', params: customer_subscription_params
+      delete '/api/v0/customer_subscriptions', params: customer_subscription_params
 
-    expect(response).to_not be_successful
-    expect(response.status).to eq(400)
+      expect(response).to_not be_successful
+      expect(response.status).to eq(400)
 
-    reply = JSON.parse(response.body, symbolize_names: true)
+      reply = JSON.parse(response.body, symbolize_names: true)
 
-    expect(reply).to be_a(Hash)
-    expect(reply).to have_key(:error)
-    expect(reply[:error]).to eq('Subscription Already Active')
-  end
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:error)
+      expect(reply[:error]).to eq('Subscription Already Cancelled')
+    end
 
-  it 'cannot create a customer subscription without a customer_id' do
-    subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
-    customer_subscription_params = { subscription_id: subscription_1.id }
+    it 'cannot cancel a customer subscription that does not exist' do
+      customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
+      subscription_1 = Subscription.create!(title: 'Monthly Tea', price: 10.00, frequency: 1)
 
-    post '/api/v0/customer_subscription', params: customer_subscription_params
+      customer_subscription_params = { customer_id: customer_1.id, subscription_id: subscription_1.id }
 
-    expect(response).to_not be_successful
-    expect(response.status).to eq(400)
+      delete '/api/v0/customer_subscriptions', params: customer_subscription_params
 
-    reply = JSON.parse(response.body, symbolize_names: true)
+      expect(response).to_not be_successful
+      expect(response.status).to eq(400)
 
-    expect(reply).to be_a(Hash)
-    expect(reply).to have_key(:error)
-    expect(reply[:error]).to eq("Customer must exist and Customer can't be blank")
-  end
+      reply = JSON.parse(response.body, symbolize_names: true)
 
-  it 'cannot create a customer subscription without a subscription_id' do
-    customer_1 = Customer.create!(first_name: 'John', last_name: 'Doe', email: 'JD@email.com', address: '123 Anywhere St.')
-    customer_subscription_params = { customer_id: customer_1.id }
-
-    post '/api/v0/customer_subscription', params: customer_subscription_params
-
-    expect(response).to_not be_successful
-    expect(response.status).to eq(400)
-
-    reply = JSON.parse(response.body, symbolize_names: true)
-
-    expect(reply).to be_a(Hash)
-    expect(reply).to have_key(:error)
-    expect(reply[:error]).to eq("Subscription must exist and Subscription can't be blank")
+      expect(reply).to be_a(Hash)
+      expect(reply).to have_key(:error)
+      expect(reply[:error]).to eq('Subscription Not Found')
+    end
   end
 end
