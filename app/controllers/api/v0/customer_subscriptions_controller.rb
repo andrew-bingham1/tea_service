@@ -6,7 +6,7 @@ class Api::V0::CustomerSubscriptionsController < ApplicationController
       if existing_customer_subscription.status == 'cancelled'
         existing_customer_subscription.update(status: 'active')
         render json: { message: 'Subscription Re-Activated'}, status: :ok
-      elsif existing_customer_subscription.status == 'active'
+      else 
         render json: { error: 'Subscription Already Active' }, status: :bad_request
       end
     else
