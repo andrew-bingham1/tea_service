@@ -141,7 +141,7 @@ RSpec.describe 'Customer Subscriptions API' do
       delete '/api/v0/customer_subscriptions', params: customer_subscription_params
 
       expect(response).to_not be_successful
-      expect(response.status).to eq(400)
+      expect(response.status).to eq(404)
 
       reply = JSON.parse(response.body, symbolize_names: true)
 

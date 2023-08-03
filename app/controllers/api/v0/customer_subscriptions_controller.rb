@@ -29,7 +29,7 @@ class Api::V0::CustomerSubscriptionsController < ApplicationController
         render json: { error: 'Subscription Already Cancelled' }, status: :bad_request
       end
     else 
-      render json: { error: 'Subscription Not Found' }, status: :bad_request
+      render json: { error: 'Subscription Not Found' }, status: :not_found
     end
   end
   
